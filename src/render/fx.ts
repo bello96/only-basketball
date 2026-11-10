@@ -59,6 +59,27 @@ export class Fx {
     }
   }
 
+  /** 球掉出画面底边：从底边往上溅起一小团，告诉玩家"这个球没了" */
+  splash(x: number, y: number): void {
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+      const speed = 1.1 + Math.random() * 1.6;
+      this.particles.push({
+        kind: 'dust',
+        x: x + (Math.random() - 0.5) * 0.08,
+        y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        age: 0,
+        life: 0.4 + Math.random() * 0.25,
+        size: 0.022 + Math.random() * 0.024,
+        color: 'rgba(246, 238, 214, 1)',
+        rot: 0,
+        spin: 0,
+      });
+    }
+  }
+
   clear(): void {
     this.particles.length = 0;
   }

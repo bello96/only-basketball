@@ -2,7 +2,14 @@
 
 转动弧轨，让篮球第一个进筐。一个靠重力、惯性和碰撞说话的物理小游戏。
 
-在线试玩：<https://only-basketball.dengjiabei.cn>
+在线试玩：<https://only-basketball.dengjiabei.cn>（手机上可以"添加到主屏幕"，全屏玩）
+
+<p>
+  <img src="docs/shot-title.jpeg" width="24%" alt="标题页" />
+  <img src="docs/shot-level2.jpeg" width="24%" alt="第 2 关：排球挡在篮筐前面" />
+  <img src="docs/shot-level6.jpeg" width="24%" alt="第 6 关：排球倒在反向转动的蓝色轨道上" />
+  <img src="docs/shot-level7.jpeg" width="24%" alt="第 7 关：六个球的金字塔" />
+</p>
 
 ## 怎么玩
 
@@ -43,6 +50,13 @@ npm run deploy   # 构建并发布到 Cloudflare Workers（静态资源）
 `tests/physics.test.ts` 把这些性质和理论值对过账：自由落体、恢复系数对应的反弹高度、
 碗里纯滚动的摆动周期 `T = 2π√((1+k)L/g)`（误差小于 1.5%）、40% 惯性规律、堆叠稳定、高速不穿透等。
 
+## 声音
+
+没有音频文件，全部用 WebAudio 现场合成（`src/audio.ts`）。音量不是凭感觉定的：
+`tools/audio-probe.js` 会把每个音效离线渲染出来，量峰值和响度。靠它发现并修掉了两个问题——
+一堆球同时落地时好几个撞击声叠加会破音（现在逐个减弱并加了软限幅）；撞击声原先只有 300Hz
+以下的闷响，手机的小扬声器基本发不出来（现在加了一层中频的"笃"声）。
+
 ## 关卡是怎么设计的
 
 所有静止的球都待在各自轨道的最低点，所以整个局面可以看成一张"条形码"：
@@ -74,8 +88,9 @@ src/physics/   物理引擎
 src/game/      规则（进球、出界、胜负、计时）与关卡表
 src/render/    Canvas 渲染：墙面、弧轨、球、篮筐、球网（Verlet 绳网）、粒子
 src/audio.ts   音效，全部用 WebAudio 现场合成
-src/app.ts     界面流程、输入、主循环
-tools/         关卡实验台、参考解法、字体子集化脚本
+src/input.ts   拖动手势（多指接管）
+src/app.ts     界面流程、主循环
+tools/         关卡实验台、参考解法、音效体检、字体子集化脚本
 tests/         测试
 ```
 

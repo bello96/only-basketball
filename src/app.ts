@@ -399,6 +399,12 @@ export class App {
       } else if (e.type === 'score') {
         if (!quiet) this.sound.swish();
       } else if (e.type === 'out') {
+        // 球从画面底边掉出去的地方溅一下
+        const cam = this.renderer.cam;
+        const ball = game.world.balls[e.ball];
+        if (Math.abs(ball.x) * cam.scale < window.innerWidth / 2 + 30) {
+          this.fx.splash(ball.x, (window.innerHeight - cam.cy) / cam.scale);
+        }
         if (!quiet && e.kind === 'volleyball' && !game.over) this.sound.drop();
       } else if (e.type === 'win') {
         const a = game.hoopAngle();

@@ -35,6 +35,9 @@ const RAIL = {
 /** 筐沿椭圆的短半轴：模拟从略高处看篮筐的透视 */
 const RIM_MINOR = 0.048;
 const NET_KNOTS = 10;
+/** 轴心上方限位刻度的半径（米），以及限位钉比最大倾角多让出的一点角度（让指针刚好碰到钉子边） */
+const DIAL_R = 0.128;
+const DIAL_STOP_GAP = 0.19;
 
 /** 把关卡取景框放进当前视口 */
 export function fitCamera(vw: number, vh: number, view: Level['view']): Camera {
@@ -265,6 +268,20 @@ export class Renderer {
         b.arc(0, 0, ring.r * cam.scale, 0, Math.PI * 2);
         b.stroke();
       }
+      // 轴心上方的限位：一小段刻度弧，两头各一颗限位钉。转盘上的指针碰到钉子就转不动了
+      const dial = DIAL_R * cam.scale;
+      b.strokeStyle = 'rgba(232, 244, 236, 0.2)';
+      b.lineWidth = 1.5;
+      b.beginPath();
+      b.arc(0, 0, dial, -Math.PI / 2 - level.maxTilt, -Math.PI / 2 + level.maxTilt);
+      b.stroke();
+      b.fillStyle = 'rgba(232, 244, 236, 0.62)';
+      for (const side of [-1, 1]) {
+        const stop = level.maxTilt + DIAL_STOP_GAP;
+        b.beginPath();
+        b.arc(side * dial * Math.sin(stop), -dial * Math.cos(stop), Math.max(2, 0.014 * cam.scale), 0, Math.PI * 2);
+        b.fill();
+      }
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.bg, 0, 0);
@@ -342,6 +359,18 @@ export class Renderer {
     ctx.beginPath();
     ctx.moveTo(-Math.sin(rig) * 0.03, -Math.cos(rig) * 0.03);
     ctx.lineTo(Math.sin(rig) * 0.03, Math.cos(rig) * 0.03);
+    ctx.stroke();
+    // 指针：朝上伸出去，在墙上那段刻度弧的两颗限位钉之间摆动（转盘向右转，顶上的指针向左走）
+    const px = -Math.sin(rig);
+    const py = -Math.cos(rig);
+    ctx.strokeStyle = RAIL.normal.edge;
+    ctx.lineWidth = 0.02;
+    ctx.beginPath();
+    ctx.moveTo(px * 0.08, py * 0.08);
+    ctx.lineTo(px * DIAL_R, py * DIAL_R);
+    ctx.stroke();
+    ctx.strokeStyle = RAIL.normal.light;
+    ctx.lineWidth = 0.009;
     ctx.stroke();
   }
 
