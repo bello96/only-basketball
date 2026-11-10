@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.wrangler/
+*.log
+.DS_Store
+# 参考截图（含他人肖像与室内环境），仅本地参考，不入库
+static-image/

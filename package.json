@@ -1,0 +1,22 @@
+{
+  "name": "only-basketball",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "弧转乾坤：转动弧轨，让篮球第一个入网的重力物理小游戏（纯静态页面，部署到 Cloudflare Workers 静态资源）",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "subset-font": "^2.9.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.156.2"
+  }
+}

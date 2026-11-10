@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#1e5a4d" />
+    <meta name="description" content="转动弧轨，让篮球第一个进筐。一个靠重力、惯性和碰撞说话的物理小游戏。" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>弧转乾坤</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="stage" aria-label="游戏画面：左右拖动可以转动弧轨"></canvas>
+
+    <header id="hud" class="hud" hidden>
+      <button class="icon-btn" id="btn-levels" type="button" aria-label="选择关卡">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16" /></svg>
+      </button>
+      <div class="clock">
+        <span class="clock-level" id="hud-level"></span>
+        <output class="clock-time" id="hud-time">0.00</output>
+      </div>
+      <div class="hud-group">
+        <button class="icon-btn" id="btn-sound" type="button" aria-label="声音" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
+            <path class="waves" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" />
+            <path class="mute" d="M15.5 9.5l5 5M20.5 9.5l-5 5" />
+          </svg>
+        </button>
+        <button class="icon-btn" id="btn-restart" type="button" aria-label="重新开始">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12a7 7 0 1 1-2.3-5.2" />
+            <path d="M19.5 4.5v4.2h-4.2" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <p id="hint" class="hint" hidden></p>
+
+    <main id="title" class="screen screen-title">
+      <svg class="logo" viewBox="0 0 520 190" role="img" aria-label="弧转乾坤">
+        <path class="logo-rail-edge" d="M 34 62 A 290 290 0 0 0 486 62" />
+        <path class="logo-rail" d="M 34 62 A 290 290 0 0 0 486 62" />
+        <g class="logo-text">
+          <text transform="translate(112 85) rotate(35)">弧</text>
+          <text transform="translate(206 128) rotate(12)">转</text>
+          <text transform="translate(314 128) rotate(-12)">乾</text>
+          <text transform="translate(408 85) rotate(-35)">坤</text>
+        </g>
+      </svg>
+      <p class="tagline">转动弧轨，让篮球第一个进筐。</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-start" type="button">开始</button>
+        <button class="btn" id="btn-pick" type="button">选择关卡</button>
+      </div>
+    </main>
+
+    <section id="levels" class="screen screen-levels" hidden aria-labelledby="levels-heading">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="levels-heading">选择关卡</h2>
+          <button class="icon-btn icon-btn-dark" id="btn-close-levels" type="button" aria-label="返回">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        <ol id="level-list" class="level-list"></ol>
+      </div>
+    </section>
+
+    <section id="result" class="sheet" hidden aria-live="polite">
+      <h2 id="result-title"></h2>
+      <p id="result-detail"></p>
+      <div id="result-stars" class="stars" hidden></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-result-main" type="button"></button>
+        <button class="btn" id="btn-result-alt" type="button"></button>
+      </div>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

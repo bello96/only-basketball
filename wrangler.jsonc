@@ -1,0 +1,15 @@
+{
+  // Cloudflare Workers 静态资源部署：游戏是纯前端，没有服务端代码。
+  // 发布的是 `npm run build` 生成的 dist/ 目录。
+  "name": "only-basketball",
+  "compatibility_date": "2026-11-09",
+  "assets": {
+    "directory": "./dist"
+  },
+  "routes": [
+    {
+      "pattern": "only-basketball.dengjiabei.cn",
+      "custom_domain": true
+    }
+  ]
+}
