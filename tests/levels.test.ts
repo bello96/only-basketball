@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Game } from '../src/game/game';
 import { LEVELS } from '../src/game/levels';
 import { TICK, deg } from '../src/physics/world';
-import { runScript, whereIs } from '../tools/lab';
+import { noisyScript, runScript, whereIs } from '../tools/lab';
 import { SCRIPTS } from '../tools/scripts';
 
 const toDeg = (r: number): number => (r * 180) / Math.PI;
@@ -52,6 +52,18 @@ describe('关卡', () => {
       expect(result.status, result.log.slice(-4).join('\n')).toBe('won');
       expect(result.time).toBeLessThan(level.par[0]);
       expect(game.stars()).toBe(3);
+    },
+  );
+
+  it.each(LEVELS.map((level) => [level.index + 1, level.name, level] as const))(
+    '第 %i 关「%s」的解法经得起手抖：转速 ±25%、随机停顿的 20 局里至少赢 17 局',
+    (_n, _name, level) => {
+      let wins = 0;
+      for (let seed = 1; seed <= 20; seed++) {
+        const game = new Game(level, { settle: true, recordImpacts: false });
+        if (runScript(game, noisyScript(SCRIPTS[level.index].solve, seed), false).status === 'won') wins++;
+      }
+      expect(wins).toBeGreaterThanOrEqual(17);
     },
   );
 

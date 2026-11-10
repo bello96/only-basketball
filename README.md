@@ -61,9 +61,11 @@ npm run deploy   # 构建并发布到 Cloudflare Workers（静态资源）
 node --import ./tools/register.mjs tools/lab.ts 4          # 第 4 关：按参考解法走一遍
 node --import ./tools/register.mjs tools/lab.ts 4 sweep    # 不动脑筋一路转到底，会怎样？
 node --import ./tools/register.mjs tools/lab.ts 4 robust   # 参考解法放慢 / 加快还能不能过
+node --import ./tools/register.mjs tools/lab.ts 4 fuzz     # 模拟手抖（转速 ±25%、随机停顿）跑 20 局的胜率
 ```
 
-每一关的参考解法在 `tools/scripts.ts`，`tests/levels.test.ts` 会逐关回放，保证关卡可解、三星可达。
+每一关的参考解法在 `tools/scripts.ts`，`tests/levels.test.ts` 会逐关回放，
+保证关卡可解、三星可达，并且解法经得起手抖。
 
 ## 目录
 

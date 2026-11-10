@@ -5,7 +5,7 @@ import { LEVELS } from './game/levels';
 import { TICK, deg } from './physics/world';
 import { Fx } from './render/fx';
 import { Net } from './render/net';
-import { Renderer } from './render/renderer';
+import { type Camera, Renderer, fitCamera } from './render/renderer';
 import { type Progress, loadProgress, saveProgress } from './storage';
 
 type Mode = 'title' | 'play';
@@ -130,25 +130,39 @@ export class App {
 
   private showTitle(): void {
     this.mode = 'title';
-    this.load(DEMO_LEVEL);
-    this.refreshStartButton();
+    // 先显示标题页再取景：取景要量标题页里元素的位置
+    this.titleScreen.hidden = false;
     this.hud.hidden = true;
     this.hint.hidden = true;
     this.levelsScreen.hidden = true;
-    this.titleScreen.hidden = false;
+    this.load(DEMO_LEVEL);
+    this.refreshStartButton();
   }
 
   private updateView(): void {
     const view = this.level.view;
-    // 标题页把转盘往下放一点、拉远一点，给标题留位置
-    this.renderer.setView(
-      this.mode === 'title'
-        ? { top: view.top - 1.05, bottom: view.bottom + 0.35, minWidth: view.minWidth + 0.5 }
-        : view,
-    );
+    if (this.mode === 'title') this.renderer.setCamera(this.titleCamera(view));
+    else this.renderer.setView(view);
     // 屏幕比取景框高时，球要掉出屏幕底边才算出界，不能在半空消失
     const cam = this.renderer.cam;
     this.game.floorY = Math.max(view.bottom + 0.12, (window.innerHeight - cam.cy) / cam.scale + 0.02);
+  }
+
+  /** 标题页：把演示用的转盘摆进副标题和按钮之间的空当，谁也不挡谁 */
+  private titleCamera(view: Level['view']): Camera {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const top = this.titleScreen.querySelector('.tagline')!.getBoundingClientRect().bottom + 10;
+    const bottom = this.titleScreen.querySelector('.actions')!.getBoundingClientRect().top - 14;
+    if (bottom - top < 130) {
+      // 横屏手机等空当太小的情况：退回通用取景，拉远一点
+      return fitCamera(vw, vh, { top: view.top - 1.05, bottom: view.bottom + 0.35, minWidth: view.minWidth + 0.5 });
+    }
+    // 转盘本身占的高度：从轴心上方一点到球网底
+    const worldTop = -0.25;
+    const worldBottom = view.bottom - 0.4;
+    const scale = Math.min((bottom - top) / (worldBottom - worldTop), vw / (view.minWidth + 0.4));
+    return { scale, cx: vw / 2, cy: (top + bottom) / 2 - ((worldTop + worldBottom) / 2) * scale };
   }
 
   private openLevels(): void {

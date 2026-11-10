@@ -106,7 +106,7 @@ export const SCRIPTS: Record<number, Record<string, Step[]>> = {
     solve: [
       { turn: -22, rate: 12, label: '向左转一点，右侧的排球落到第二层' },
       { hold: 1.5 },
-      { turn: 38, rate: 12, until: (g) => below(0, 0.7)(g) && below(3, 0.7)(g), label: '向右转：经过正中时暗道把排球漏走，左侧的排球落下' },
+      { turn: 46, rate: 12, until: (g) => below(0, 0.7)(g) && below(3, 0.7)(g), label: '向右转：经过正中时暗道把排球漏走，左侧的排球落下' },
       { hold: 1.2 },
       { turn: 0, rate: 12, until: out('volleyball', 5), label: '回正，把剩下的排球也漏走' },
       { hold: 2, until: out('volleyball', 5) },

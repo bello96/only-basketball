@@ -68,7 +68,11 @@ export class Renderer {
   }
 
   setView(view: Level['view']): void {
-    this.cam = fitCamera(this.vw, this.vh, view);
+    this.setCamera(fitCamera(this.vw, this.vh, view));
+  }
+
+  setCamera(cam: Camera): void {
+    this.cam = cam;
     this.bgKey = '';
   }
 

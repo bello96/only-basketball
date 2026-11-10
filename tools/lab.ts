@@ -109,6 +109,24 @@ export function runScript(game: Game, steps: Step[], verbose = true): RunResult 
   return { status: game.status, reason: game.loseReason, time: game.time, log };
 }
 
+/**
+ * 拟人扰动：每一步的转速随机 ±25%，步骤之间随机多停 0~0.6 秒。
+ * 同一个种子永远得到同一份脚本，所以结果可以复现。
+ */
+export function noisyScript(steps: Step[], seed: number): Step[] {
+  let state = seed * 2654435761;
+  const rand = (): number => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+  const noisy: Step[] = [];
+  for (const st of steps) {
+    noisy.push('turn' in st ? { ...st, rate: st.rate * (0.75 + rand() * 0.5) } : st);
+    noisy.push({ hold: rand() * 0.6 });
+  }
+  return noisy;
+}
+
 // ---------------------------------------------------------------- 命令行入口
 
 async function main(): Promise<void> {
@@ -130,6 +148,22 @@ async function main(): Promise<void> {
       const result = runScript(game, scaled, false);
       console.log(`转速 ×${factor.toFixed(2)}：${result.status}${result.reason ? `（${result.reason}）` : ''}  ${result.time.toFixed(1)}s`);
     }
+    return;
+  }
+  if (name === 'fuzz') {
+    // 拟人扰动跑 20 局看胜率
+    const steps = SCRIPTS[index]?.solve;
+    if (!steps) throw new Error('这一关还没有参考解法');
+    let wins = 0;
+    const fails: string[] = [];
+    const runs = 20;
+    for (let seed = 1; seed <= runs; seed++) {
+      const game = new Game(level, { settle: true, recordImpacts: false });
+      const result = runScript(game, noisyScript(steps, seed), false);
+      if (result.status === 'won') wins++;
+      else fails.push(`#${seed}:${result.status}${result.reason ? `(${result.reason})` : ''}`);
+    }
+    console.log(`拟人扰动 ${runs} 局：胜 ${wins} 局${fails.length ? `；未过：${fails.join(' ')}` : ''}`);
     return;
   }
   if (name === 'sweep') {
