@@ -2,11 +2,12 @@ import { Sound } from './audio';
 import { Game, type LoseReason } from './game/game';
 import type { Level } from './game/level';
 import { LEVELS } from './game/levels';
+import { DragTracker } from './input';
 import { TICK, deg } from './physics/world';
 import { Fx } from './render/fx';
 import { Net } from './render/net';
 import { type Camera, Renderer, fitCamera } from './render/renderer';
-import { type Progress, loadProgress, saveProgress } from './storage';
+import { type Progress, loadProgress, recordWin, saveProgress } from './storage';
 
 type Mode = 'title' | 'play';
 
@@ -53,7 +54,10 @@ export class App {
   private slowUntil = 0;
   private demoClock = 0;
   private resultTimer = 0;
-  private drag: { id: number; x: number } | null = null;
+  private hintTimer = 0;
+  /** 刚刚这次通关相对旧成绩的情况（进球那一刻就记下并存档，结算面板只负责展示） */
+  private lastWin: { previous: number | null; record: boolean } | null = null;
+  private drag = new DragTracker();
   private keys = { left: false, right: false, fine: false };
   private shownTime = '';
 
@@ -104,6 +108,8 @@ export class App {
     this.slowUntil = 0;
     this.demoClock = 0;
     window.clearTimeout(this.resultTimer);
+    window.clearTimeout(this.hintTimer);
+    this.lastWin = null;
     this.result.hidden = true;
     this.updateView();
   }
@@ -204,13 +210,8 @@ export class App {
     this.hint.hidden = true;
     if (game.status === 'won') {
       const i = this.levelIndex;
-      const previous = this.progress.best[i];
-      const record = previous == null || game.time < previous;
-      if (record) this.progress.best[i] = game.time;
-      this.progress.stars[i] = Math.max(this.progress.stars[i] ?? 0, game.stars());
+      const { previous, record } = this.lastWin ?? { previous: null, record: true };
       const last = i === LEVELS.length - 1;
-      if (!last) this.progress.unlocked = Math.max(this.progress.unlocked, i + 1);
-      saveProgress(this.progress);
 
       this.resultTitle.textContent = last ? '全部通关' : '进了';
       this.resultDetail.textContent =
@@ -241,8 +242,9 @@ export class App {
     const stage = this.stage;
     stage.addEventListener('pointerdown', (e) => {
       this.sound.unlock();
-      if (this.mode !== 'play' || this.drag) return;
-      this.drag = { id: e.pointerId, x: e.clientX };
+      if (this.mode !== 'play') return;
+      // 新落下的手指直接接管拖动
+      this.drag.down(e.pointerId, e.clientX);
       try {
         stage.setPointerCapture(e.pointerId);
       } catch {
@@ -251,16 +253,15 @@ export class App {
       stage.classList.add('is-dragging');
     });
     stage.addEventListener('pointermove', (e) => {
-      if (!this.drag || e.pointerId !== this.drag.id) return;
-      const dx = e.clientX - this.drag.x;
-      this.drag.x = e.clientX;
+      const dx = this.drag.move(e.pointerId, e.clientX);
       // 手指移动多少，最外圈轨道的底部就跟着走多少
-      this.steer(dx / (this.renderer.cam.scale * this.level.hoop.ringR));
+      if (dx !== 0) this.steer(dx / (this.renderer.cam.scale * this.level.hoop.ringR));
     });
     const release = (e: PointerEvent): void => {
-      if (!this.drag || e.pointerId !== this.drag.id) return;
-      this.drag = null;
-      stage.classList.remove('is-dragging');
+      // iOS 只认"抬手"这一下是用户手势：切回页面后音频被系统挂起，在这里恢复
+      this.sound.unlock();
+      this.drag.up(e.pointerId);
+      if (!this.drag.dragging) stage.classList.remove('is-dragging');
     };
     stage.addEventListener('pointerup', release);
     stage.addEventListener('pointercancel', release);
@@ -314,14 +315,16 @@ export class App {
   }
 
   private steer(delta: number): void {
-    if (this.mode !== 'play' || this.game.over) return;
+    // 选关面板开着时对局是暂停的，键盘和手指都不该再转动转盘
+    if (this.mode !== 'play' || this.game.over || !this.levelsScreen.hidden) return;
     const max = this.level.maxTilt;
     this.target = Math.max(-max, Math.min(max, this.target + delta));
     this.game.setTarget(this.target);
     if (!this.hint.hidden && !this.hint.classList.contains('is-fading')) {
       this.hint.classList.add('is-fading');
-      window.setTimeout(() => {
-        if (this.hint.classList.contains('is-fading')) this.hint.hidden = true;
+      window.clearTimeout(this.hintTimer);
+      this.hintTimer = window.setTimeout(() => {
+        this.hint.hidden = true;
       }, 5200);
     }
   }
@@ -403,7 +406,13 @@ export class App {
         this.fx.confetti(d * Math.sin(a), d * Math.cos(a));
         this.slowUntil = now + 650;
         if (!quiet) this.sound.win();
-        if (this.mode === 'play') this.resultTimer = window.setTimeout(() => this.finish(), 1500);
+        if (this.mode === 'play') {
+          // 进球这一刻就记成绩并存档：结算面板 1.5 秒后才出来，
+          // 这期间重开、换关或者关掉页面都不该丢掉这次通关
+          this.lastWin = recordWin(this.progress, this.levelIndex, game.time, game.stars(), LEVELS.length);
+          saveProgress(this.progress);
+          this.resultTimer = window.setTimeout(() => this.finish(), 1500);
+        }
       } else if (e.type === 'lose') {
         if (!quiet) {
           if (e.reason === 'volleyball-scored') this.sound.whistle();

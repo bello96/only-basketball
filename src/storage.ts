@@ -34,3 +34,22 @@ export function saveProgress(progress: Progress): void {
     // 无痕模式等场景下存不了，不影响游玩
   }
 }
+
+/**
+ * 把一次通关记进进度：保留最好成绩和最高星级，解锁下一关。
+ * 返回这一关之前的最好成绩（没有则为 null）以及这次是否刷新了纪录。
+ */
+export function recordWin(
+  progress: Progress,
+  index: number,
+  time: number,
+  stars: number,
+  levelCount: number,
+): { previous: number | null; record: boolean } {
+  const previous = progress.best[index] ?? null;
+  const record = previous === null || time < previous;
+  if (record) progress.best[index] = time;
+  progress.stars[index] = Math.max(progress.stars[index] ?? 0, stars);
+  progress.unlocked = Math.max(progress.unlocked, Math.min(index + 1, levelCount - 1));
+  return { previous, record };
+}

@@ -45,6 +45,8 @@ export class Game {
   /** 每个球相对筐沿连线的深度（上一 tick），以及是否正处于"入筐途中" */
   private depth: number[] = [];
   private entering: boolean[] = [];
+  /** 球是否正兜在网里（只有从筐口进去的球才算） */
+  private netted: boolean[] = [];
 
   constructor(level: Level, opts: GameOptions = {}) {
     this.level = level;
@@ -81,6 +83,7 @@ export class Game {
     for (const b of world.balls) {
       this.depth.push(this.hoopCoords(b).depth);
       this.entering.push(false);
+      this.netted.push(false);
     }
   }
 
@@ -141,7 +144,10 @@ export class Game {
       this.depth[b.id] = depth;
       const inside = Math.abs(side) < hoop.halfWidth;
       if (!this.entering[b.id]) {
-        if (prev < 0 && depth >= 0 && inside && !this.scored.includes(b.id)) this.entering[b.id] = true;
+        if (prev < 0 && depth >= 0 && inside && !this.scored.includes(b.id)) {
+          this.entering[b.id] = true;
+          this.netted[b.id] = true;
+        }
       } else if (depth < -0.03 || !inside) {
         // 又弹出去了
         this.entering[b.id] = false;
@@ -159,11 +165,15 @@ export class Game {
         }
       }
 
-      // 球在网里会被兜住减速
-      if (inside && depth > 0 && depth < hoop.netLen + b.r) {
-        b.vx *= netDamp;
-        b.vy *= netDamp;
-        b.w *= netDamp;
+      // 从筐口进去的球会被网兜住减速，直到从网底漏出去（或者又弹回筐口上方）
+      if (this.netted[b.id]) {
+        if (depth < -0.03 || depth > hoop.netLen + b.r || Math.abs(side) > hoop.halfWidth + b.r) {
+          this.netted[b.id] = false;
+        } else {
+          b.vx *= netDamp;
+          b.vy *= netDamp;
+          b.w *= netDamp;
+        }
       }
 
       // 出界
@@ -195,6 +205,7 @@ export class Game {
     g.scored = [...this.scored];
     g.depth = [...this.depth];
     g.entering = [...this.entering];
+    g.netted = [...this.netted];
     return g;
   }
 

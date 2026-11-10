@@ -20,8 +20,9 @@ export class Net {
   /** 节点坐标：[左0..左6, 右0..右6] */
   readonly x = new Float64Array(ROWS * 2);
   readonly y = new Float64Array(ROWS * 2);
-  private px = new Float64Array(ROWS * 2);
-  private py = new Float64Array(ROWS * 2);
+  /** 上一 tick 的节点坐标：既是 Verlet 积分用的"上一位置"，也供渲染插值 */
+  readonly px = new Float64Array(ROWS * 2);
+  readonly py = new Float64Array(ROWS * 2);
   private restWidth = new Float64Array(ROWS);
   private segLen = new Float64Array(ROWS);
   readonly rows = ROWS;
@@ -74,7 +75,12 @@ export class Net {
     const n = ROWS * 2;
     const g = GRAVITY * TICK * TICK;
     for (let i = 0; i < n; i++) {
-      if (i === 0 || i === ROWS) continue;
+      if (i === 0 || i === ROWS) {
+        // 钉在筐沿上的点不积分，但同样记下上一位置，供渲染插值
+        px[i] = x[i];
+        py[i] = y[i];
+        continue;
+      }
       const vx = (x[i] - px[i]) * DAMPING;
       const vy = (y[i] - py[i]) * DAMPING;
       px[i] = x[i];

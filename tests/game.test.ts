@@ -164,6 +164,38 @@ describe('胜负判定', () => {
     expect(outAt - ball.r).toBeLessThan(level.view.bottom + 3.2);
   });
 
+  it('球网只兜住从筐口进去的球：从歪着的篮筐外侧落下的球不会被凭空减速', () => {
+    // 篮筐挂在 40° 处。球从右侧筐沿的外面竖直落下，不碰轨道也不碰筐沿，
+    // 但途中会穿过"筐口正下方沿筐轴方向"的那条带
+    const level = compileLevel({ ...oneRing([{ kind: 'volleyball', x: 1.02, y: 0.2 }], 40), rings: [{ r: 1.0, span: [-60, 54] }] }, 0);
+    const game = new Game(level);
+    game.world.linDamp = 0;
+    const ball = game.world.balls[0];
+    let crossedBand = false;
+    const n = Math.round(0.5 / TICK);
+    for (let i = 0; i < n; i++) {
+      game.tick();
+      const { depth, side } = game.hoopCoords(ball);
+      if (depth > 0.3 && depth < 0.5 && Math.abs(side) < 0.1) crossedBand = true;
+    }
+    expect(crossedBand).toBe(true);
+    expect(game.scored).toEqual([]);
+    // 全程自由落体：没有碰到任何东西，速度就是 g·t
+    expect(ball.vx).toBe(0);
+    expect(ball.vy).toBeCloseTo(9.8 * n * TICK, 6);
+  });
+
+  it('从筐口进去的球会被球网兜住减速', () => {
+    const game = new Game(compileLevel(oneRing([{ kind: 'basketball', x: 0, y: 0.5 }]), 0));
+    game.world.linDamp = 0;
+    const ball = game.world.balls[0];
+    const n = Math.round(0.45 / TICK);
+    for (let i = 0; i < n; i++) game.tick();
+    expect(game.status).toBe('won');
+    expect(ball.vy).toBeGreaterThan(1);
+    expect(ball.vy).toBeLessThan(9.8 * n * TICK * 0.9);
+  });
+
   it('从下往上穿过篮筐不算进球，落回来穿过才算', () => {
     const game = new Game(compileLevel(oneRing([{ kind: 'basketball', x: 0, y: 1.6 }]), 0));
     const ball = game.world.balls[0];

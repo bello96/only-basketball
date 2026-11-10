@@ -322,6 +322,8 @@ button {
 /* ------------------------------------------------------------ 选关 */
 
 .screen-levels {
+  /* 从结算面板点"选择关卡"进来时，要盖在结算面板（z-index 4）上面 */
+  z-index: 5;
   display: grid;
   place-items: center;
   padding: calc(var(--safe-top) + 16px) 14px calc(var(--safe-bottom) + 16px);

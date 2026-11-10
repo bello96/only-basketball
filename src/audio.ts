@@ -26,7 +26,8 @@ export class Sound {
         const data = this.noise.getChannelData(0);
         for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
       }
-      if (this.ctx.state === 'suspended') void this.ctx.resume();
+      // 除了 suspended，iOS 在切后台、锁屏、来电之后还会报 interrupted，同样需要 resume
+      if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
     } catch {
       this.ctx = null;
     }

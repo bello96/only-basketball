@@ -45,6 +45,39 @@ export function fitCamera(vw: number, vh: number, view: Level['view']): Camera {
   return { scale, cx: vw / 2, cy: spare * 0.42 - view.top * scale };
 }
 
+/**
+ * 目标（篮筐）在画面外时，算出屏幕边缘指示的位置：从轴心朝目标的方向走，停在安全区的内缘。
+ * 目标在画面里则返回 null。坐标都是 CSS 像素；top 是顶栏占掉的高度。
+ */
+export function edgeBadge(
+  screen: { vw: number; vh: number; pad: number; top: number },
+  cx: number,
+  cy: number,
+  sx: number,
+  sy: number,
+): { x: number; y: number; angle: number } | null {
+  const { vw, vh, pad, top } = screen;
+  if (sx > 6 && sx < vw - 6 && sy > top - 40 && sy < vh - 6) return null;
+  const dx = sx - cx;
+  const dy = sy - cy;
+  let t = 1;
+  // 轴心自己就在安全区外时（比如横屏时轴心比顶栏还高），那条边的限制算出来是负数：
+  // 跳过它，否则指示会被镜像到轴心的另一侧
+  const stopAt = (bound: number, origin: number, d: number): void => {
+    const v = (bound - origin) / d;
+    if (v > 0) t = Math.min(t, v);
+  };
+  if (dx > 0) stopAt(vw - pad, cx, dx);
+  else if (dx < 0) stopAt(pad, cx, dx);
+  if (dy > 0) stopAt(vh - pad, cy, dy);
+  else if (dy < 0) stopAt(top, cy, dy);
+  return {
+    x: Math.max(pad, Math.min(vw - pad, cx + dx * t)),
+    y: Math.max(top, Math.min(vh - pad, cy + dy * t)),
+    angle: Math.atan2(dy, dx),
+  };
+}
+
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private bg: HTMLCanvasElement = document.createElement('canvas');
@@ -155,23 +188,16 @@ export class Renderer {
   /** 篮筐转到画面外时，在屏幕边缘画一个小筐加箭头，告诉玩家它在哪边 */
   private drawHoopPointer(wx: number, wy: number): void {
     const { ctx, cam, dpr, vw, vh } = this;
-    const sx = cam.cx + wx * cam.scale;
-    const sy = cam.cy + wy * cam.scale;
-    const pad = 30;
-    const top = 118;
-    if (sx > 6 && sx < vw - 6 && sy > top - 40 && sy < vh - 6) return;
-    // 从轴心朝篮筐的方向走，停在屏幕内缘
-    const dx = sx - cam.cx;
-    const dy = sy - cam.cy;
-    let t = 1;
-    if (dx > 0) t = Math.min(t, (vw - pad - cam.cx) / dx);
-    if (dx < 0) t = Math.min(t, (pad - cam.cx) / dx);
-    if (dy > 0) t = Math.min(t, (vh - pad - cam.cy) / dy);
-    if (dy < 0) t = Math.min(t, (top - cam.cy) / dy);
-    const px = cam.cx + dx * t;
-    const py = cam.cy + dy * t;
-    const a = Math.atan2(dy, dx);
-    ctx.setTransform(dpr, 0, 0, dpr, px * dpr, py * dpr);
+    const badge = edgeBadge(
+      { vw, vh, pad: 30, top: 118 },
+      cam.cx,
+      cam.cy,
+      cam.cx + wx * cam.scale,
+      cam.cy + wy * cam.scale,
+    );
+    if (!badge) return;
+    const a = badge.angle;
+    ctx.setTransform(dpr, 0, 0, dpr, badge.x * dpr, badge.y * dpr);
     ctx.fillStyle = 'rgba(13, 42, 34, 0.85)';
     ctx.beginPath();
     ctx.arc(0, 0, 19, 0, Math.PI * 2);
@@ -345,7 +371,7 @@ export class Renderer {
       }
     }
 
-    this.drawNet(frame.net, s, c, front);
+    this.drawNet(frame.net, frame.alpha, s, c, front);
 
     // 筐沿：一个压扁的椭圆，后半圈在球后面，前半圈在球前面
     const from = front ? 0 : Math.PI;
@@ -372,18 +398,21 @@ export class Renderer {
     }
   }
 
-  private drawNet(net: Net, s: number, c: number, front: boolean): void {
+  private drawNet(net: Net, alpha: number, s: number, c: number, front: boolean): void {
     const ctx = this.ctx;
     const rows = net.rows;
-    const topWidth = Math.hypot(net.x[rows] - net.x[0], net.y[rows] - net.y[0]) || 1;
+    // 网的节点和球、筐沿一样，在上一 tick 与这一 tick 之间插值，快速转动时网口才不会和筐沿脱开
+    const nx = (i: number): number => net.px[i] + (net.x[i] - net.px[i]) * alpha;
+    const ny = (i: number): number => net.py[i] + (net.y[i] - net.py[i]) * alpha;
+    const topWidth = Math.hypot(nx(rows) - nx(0), ny(rows) - ny(0)) || 1;
     /** 第 i 行、第 j 个网结的屏幕位置；返回它在圆筒上的前后位置（>0 为朝向观众） */
     const knot = (i: number, j: number, out: [number, number]): number => {
       const th = (Math.PI * 2 * (j + (i % 2 ? 0.5 : 0))) / NET_KNOTS;
       const t = (1 - Math.cos(th)) / 2;
-      const lx = net.x[i];
-      const ly = net.y[i];
-      const rx = net.x[rows + i];
-      const ry = net.y[rows + i];
+      const lx = nx(i);
+      const ly = ny(i);
+      const rx = nx(rows + i);
+      const ry = ny(rows + i);
       const width = Math.hypot(rx - lx, ry - ly);
       const depth = Math.sin(th);
       const lift = depth * RIM_MINOR * (width / topWidth);
